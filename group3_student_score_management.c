@@ -31,6 +31,8 @@ void input(int* choice);
 void remove_newline_ch(char* line);
 int validString(char* s);
 void copyNewStudentToData(char* from, char* des);
+char* trimWhiteSpace(char* str);
+int existStudent(const char *searchID);
 
 int main() {
 	int res = loadSavedStudents();
@@ -53,9 +55,13 @@ int main() {
 			}
 			
 			case 3: {
-				searchStudents();
-				break;
+    		char searchID[50];
+    		printf("Nhap ma sinh vien: ");
+    		scanf("%s", searchID);
+    		searchStudents(searchID);
+    		break;
 			}
+
 			
 			case 4: {
 				averageScore();
@@ -80,6 +86,7 @@ int main() {
 
 void addStudent() {
 	printf("\n");
+	//* Ko duoc them sinh vien khi qua gioi han 100
 	if(line == 100) {
 		printf("Da dat gioi han 100 sinh vien. Khong the them sinh vien.\n");
 		return;
@@ -89,12 +96,20 @@ void addStudent() {
 	char name[50];
 	float score;
 
+    //* Tranh loi khi dung scanf voi fgets
 	getchar();	
 	//* Nhap ma sv
 	while(1) {
 	printf("Nhap ma sinh vien: ");
 	fgets(id, 50, stdin);
 	if(validString(id) == 1){
+		//* Bo cac dau space o dau va cuoi string:    hello   -> hello
+		strcpy(id, trimWhiteSpace(id));
+		//* Kiem tra xem sv da ton tai chua
+		if(existStudent(id) == 1) {
+			printf("Ma sinh vien da ton tai.\n");
+			continue;
+		}
 		break;	
 	} else {
 		printf("Ma sinh vien khong hop le.\n");
@@ -106,6 +121,7 @@ void addStudent() {
 	printf("Nhap ten sinh vien: ");
 	fgets(name, 50, stdin);
 	if(validString(name) == 1){
+		strcpy(name, trimWhiteSpace(name));
 		break;	
 	} else {
 		printf("Ten sinh vien khong hop le.\n");
@@ -116,6 +132,7 @@ void addStudent() {
 	while(1) {
 	printf("Nhap diem sinh vien: ");
 	int res = scanf("%f", &score);
+	//* Kiem tra xem diem co phai la so thap phan ko.
 	if(res > 0 && score >=0 && score <= 10){
 		break;	
 	} else {
@@ -124,10 +141,11 @@ void addStudent() {
 	}
 	}
 	
+	// Bo dau \n o cuoi string
 	remove_newline_ch(id);
 	remove_newline_ch(name);
 	
-	//* Assign new value to data 
+	// luu vao mang
 	copyNewStudentToData(id, studentIDs[line]);
 	copyNewStudentToData(name, studentNames[line]);
 	scores[line] = score;
@@ -142,6 +160,7 @@ void displayStudents() {
 	printf("Ma SV     Ten SV                                  Diem\n");
 	int i;
 	for(i = 0; i< line; i++) {
+		// Len mang xem la biet %-10s nghia la j nha ;). Cho nay ko ghi vua
 		printf("%-10s", studentIDs[i]);
 		printf("%-40s", studentNames[i]);
 		printf("%f", scores[i]);
@@ -150,8 +169,21 @@ void displayStudents() {
 	printf("\n");
 }
 
-void searchStudents() {
-	//* Implement this
+void searchStudents(const char *searchID) {
+    int found = 0;
+    int i;
+    for (i = 0; i < line; i++) {
+    	// ham strcmp kiem tra 2 string xem co giong nhau ko. Neu giong thi return 0.
+        if (strcmp(studentIDs[i], searchID) == 0) {
+            printf("Da tim thay sinh vien:\n");
+            printf("Student ID: %s\nTen: %s\nDiem: %.2f\n", studentIDs[i], studentNames[i], scores[i]);
+            found = 1;
+            break;
+        }
+    }
+    if (!found) {
+        printf("Khong the tim thay sinh vien voi ID %s.\n", searchID);
+    }
 }
 
 void averageScore() {
@@ -167,15 +199,54 @@ void averageScore() {
 }
 
 void save() {
-	//* Implement this
+    FILE *file = fopen(FILENAME, "w");
+    if (file == NULL) {
+        printf("Loi khi mo file.\n");
+        return;
+    }
+    int i;
+    for (i = 0; i < line; i++) {
+        fprintf(file, "%s, %s, %f\n", studentIDs[i], studentNames[i], scores[i]);
+    }
+    fclose(file);
+    printf("Tat ca sinh vien da duoc luu %s\n", FILENAME);
 }
+
+
+
 
 void sortStudents() {
-	//* Implement this
+    int i, j;
+    float tempScore;
+    char tempID[50];
+    char tempName[50];
+
+    // Bubble sort lmao
+    for (i = 0; i < line - 1; i++) {
+        for (j = i + 1; j < line; j++) {
+            if (scores[i] < scores[j]) {
+                // Swap scores
+                tempScore = scores[i];
+                scores[i] = scores[j];
+                scores[j] = tempScore;
+
+                // Swap student IDs
+                strcpy(tempID, studentIDs[i]);
+                strcpy(studentIDs[i], studentIDs[j]);
+                strcpy(studentIDs[j], tempID);
+
+                // Swap student names
+                strcpy(tempName, studentNames[i]);
+                strcpy(studentNames[i], studentNames[j]);
+                strcpy(studentNames[j], tempName);
+            }
+        }
+    }
+    printf("Sinh vien da duoc sap xep theo diem.\n");
 }
 
-//* Implemetation of program function. Not related to Function 1, 2, 3, 4, 5, 6
 
+//* Implemetation of program function. Not related to Function 1, 2, 3, 4, 5, 6
 int exists(char* name) {
 	FILE* f = fopen(name, "r");
 	if(f != NULL) {
@@ -185,10 +256,12 @@ int exists(char* name) {
 	return 0;
 }
 
+// Load data tu file vao cac mang
 int loadSavedStudents() {
 	if(exists(FILENAME)) {
 		FILE* f = fopen(FILENAME, "r");
 		
+		// %50 lay max 50 ky tu. [^,] bo dau "," khi scanf. %*c bo 1 ky tu cuoi la \n
 		while (fscanf(f, "%50[^,], %50[^,], %f%*c", &studentIDs[line], &studentNames[line], &scores[line]) == 3) {
 			line++;
 		}	
@@ -208,12 +281,25 @@ void displayTitle() {
 	printf("2. Hien thi danh sach sinh vien\n");
 	printf("3. Tim sinh vien theo ma so\n");
 	printf("4. Tinh diem trung binh\n");
-	printf("5. Sap xep danh sach sinh vien (giam dan theo diem)\n");
-	printf("6. Luu danh sach sinh vien vao file\n");
+	printf("5. Luu danh sach sinh vien vao file\n");
+	printf("6. Sap xep danh sach sinh vien (giam dan theo diem)\n");
 	printf("0. Thoat chuong trinh\n");
 	printf("\n");
 }
 
+
+int existStudent(const char *searchID) {
+    int found = 0;
+    int i;
+    for (i = 0; i < line; i++) {
+        if (strcmp(studentIDs[i], searchID) == 0) {
+            found = 1;
+            break;
+        }
+    }
+    
+    return found;
+}
 
 void input(int* choice) {
 	while (1) 
@@ -228,6 +314,7 @@ void input(int* choice) {
 	}
 }
 
+// Kiem tra xem string co rong ko (toan dau space)
 int validString(char* s) {
 	int char_count = 0;
 	int i= 0;
@@ -242,6 +329,7 @@ int validString(char* s) {
 	else return 1;
 }
 
+// Ghi 1 string vao 1 string khac
 void copyNewStudentToData(char* from, char* des) {
 	int i;
 	for(i = 0; i < 50; i++) {
@@ -251,9 +339,30 @@ void copyNewStudentToData(char* from, char* des) {
 		
 		des[i] = from[i];
 	}
+	des[i] = '\0';
 }
 void remove_newline_ch(char *line) {
     int new_line = strlen(line) -1;
     if (line[new_line] == '\n')
         line[new_line] = '\0';
+}
+
+char* trimWhiteSpace(char* str)
+{
+  char *end;
+
+  // Trim leading space
+  while(isspace((unsigned char)*str)) str++;
+
+  if(*str == 0)  // All spaces?
+    return str;
+
+  // Trim trailing space
+  end = str + strlen(str) - 1;
+  while(end > str && isspace((unsigned char)*end)) end--;
+
+  // Write new null terminator character
+  end[1] = '\0';
+
+  return str;
 }
