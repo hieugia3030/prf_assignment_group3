@@ -137,7 +137,8 @@ void addStudent() {
 		break;	
 	} else {
 		printf("Diem sinh vien khong hop le.\n");
-		getchar();
+		//* Khong dung getchar() de ko giu lai cac ky tu thua trong input stream
+		fflush(stdin);
 	}
 	}
 	
@@ -310,6 +311,7 @@ void input(int* choice) {
 			break;
 		} else {
 			printf("\nLua chon khong hop le\n");
+			fflush(stdin);
 		}
 	}
 }
